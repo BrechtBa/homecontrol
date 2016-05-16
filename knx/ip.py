@@ -159,24 +159,22 @@ class CEMIMessage():
         
         return m
     
-    def init_group_write(self, dst_addr=1, data=[0]):
+    def init_group(self,dst_addr=1):
         self.code = 0x11 # Comes from packet dump, why?
         self.ctl1 = 0xbc # frametype 1, repeat 1, system broadcast 1, priority 3, ack-req 0, confirm-flag 0
         self.ctl2 = 0xe0 # dst addr type 1, hop count 6, extended frame format
         self.src_addr = 0
         self.dst_addr = dst_addr
+    
+    def init_group_write(self, dst_addr=1, data=[0]):
+        self.init_group(dst_addr)
         self.tpci_apci = 0x00 * 256 + 0x80 # unnumbered data packet, group write
         self.data = data
     
     def init_group_read(self, dst_addr=1):
-        self.code = 0x11 # Comes from packet dump, why?
-        self.ctl1 = 0xbc # frametype 1, repeat 1, system broadcast 1, priority 3, ack-req 0, confirm-flag 0
-        self.ctl2 = 0xe0 # dst addr type 1, hop count 6, extended frame format
-        self.src_addr = 0
-        self.dst_addr = dst_addr
+        self.init_group(dst_addr)
         self.tpci_apci = 0x00 # unnumbered data packet, group read
         self.data = [0]
-        
 
     def to_body(self):
         b = [self.code,0x00,self.ctl1,self.ctl2,
