@@ -1,4 +1,4 @@
-from knx.ip import KNXIPTunnel
+from knxpy.ip import KNXIPTunnel
 import time
 import logging
 

@@ -1,4 +1,4 @@
-from knx.helper import *
+from knxpy.helper import *
 
 class ValueCache():
     

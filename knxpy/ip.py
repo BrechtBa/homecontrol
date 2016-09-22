@@ -1,11 +1,11 @@
 import socket
 import threading
-import SocketServer
+import socketserver
 import sys
 import logging
 
-from knx.core import KNXException, ValueCache
-from knx.helper import *
+from knxpy.core import KNXException, ValueCache
+from knxpy.helper import *
 
 is_py2 = sys.version[0] == '2'
 if is_py2:
@@ -264,7 +264,7 @@ class KNXIPTunnel():
         # 
         p.extend([0x04,0x04,0x02,0x00])
         
-        self.control_socket.sendto("".join(map(chr, p)), (self.remote_ip, self.remote_port))
+        self.control_socket.sendto("".join(map(chr, p)).encode(), (self.remote_ip, self.remote_port))
         
         #TODO: non-blocking receive
         received = self.control_socket.recv(1024)
@@ -328,7 +328,7 @@ class KNXIPTunnel():
             raise KNXException(problem)
             
     
-class DataRequestHandler(SocketServer.BaseRequestHandler):
+class DataRequestHandler(socketserver.BaseRequestHandler):
     
     def handle(self):
         data = str_to_bytes(self.request[0])
@@ -373,5 +373,5 @@ class DataRequestHandler(SocketServer.BaseRequestHandler):
                 socket.sendto(bytes_to_str(ack.to_frame()), self.client_address)
         
  
-class DataServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
+class DataServer(socketserver.ThreadingMixIn, socketserver.UDPServer):
     pass
