@@ -1,17 +1,20 @@
 import socket
 import threading
-import socketserver
+
 import sys
 import logging
+
+if sys.version[0]=='2':
+    import SocketServer as socketserver
+    import Queue as queue
+else:
+    import socketserver
+    import queue
 
 from knxpy.core import KNXException, ValueCache
 from knxpy.helper import *
 
-is_py2 = sys.version[0] == '2'
-if is_py2:
-    import Queue as queue
-else:
-    import queue as queue
+
 
 class KNXIPFrame():
     
@@ -56,7 +59,7 @@ class KNXIPFrame():
         self.service_type_id = service_type_id
     
     def to_frame(self):
-        return self.header()+self.body
+        return self.header() + self.body
     
     @classmethod
     def from_frame(cls, frame):
@@ -70,7 +73,7 @@ class KNXIPFrame():
     
     def header(self):
         tl = self.total_length()
-        res = [0x06,0x10,0,0,0,0]
+        res = bytearray([0x06,0x10,0,0,0,0])
         res[2] = (self.service_type_id >> 8) & 0xff
         res[3] = (self.service_type_id >> 0) & 0xff
         res[4] = (tl >> 8) & 0xff
@@ -240,12 +243,15 @@ class KNXIPTunnel():
             data_server_thread = threading.Thread(target=self.data_server.serve_forever)
             data_server_thread.daemon = True
             data_server_thread.start()
-            
+
+
+
+
         self.control_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.control_socket.bind((local_ip, 0))
         
         # Connect packet
-        p=[]
+        p=bytearray()
         p.extend([0x06,0x10]) # header size, protocol version
         p.extend(int_to_array(KNXIPFrame.CONNECT_REQUEST , 2))
         p.extend([0x00,0x1a]) # total length = 24 octet
@@ -263,31 +269,33 @@ class KNXIPTunnel():
 
         # 
         p.extend([0x04,0x04,0x02,0x00])
-        
-        self.control_socket.sendto("".join(map(chr, p)).encode(), (self.remote_ip, self.remote_port))
-        
+
+        self.control_socket.sendto(p, (self.remote_ip, self.remote_port))
+
         #TODO: non-blocking receive
         received = self.control_socket.recv(1024)
-        
+        received = bytearray(received)
+
         # Check if the response is an TUNNELING ACK
-        r_sid = ord(received[2])*256+ord(received[3])
+        r_sid = received[2]*256+received[3]
         if r_sid == KNXIPFrame.CONNECT_RESPONSE:
-            self.channel = ord(received[6])
+            self.channel = received[6]
             logging.debug("Connected KNX IP tunnel (Channel: {})".format(self.channel,self.seq))
             # TODO: parse the other parts of the response
         else:
-            raise KNXException("Could not initiate tunnel connection, STI = {0:x}".format(r_sid))
+            raise KNXException("Could not initiate tunnel connection, STI = {}".format(r_sid))
         
     def send_tunnelling_request(self, cemi):
         f = KNXIPFrame(KNXIPFrame.TUNNELING_REQUEST)
-        b = [0x04,self.channel,self.seq,0x00] # Connection header see KNXnet/IP 4.4.6 TUNNELLING_REQUEST
+        b = bytearray([0x04,self.channel,self.seq,0x00]) # Connection header see KNXnet/IP 4.4.6 TUNNELLING_REQUEST
         if (self.seq < 0xff):
             self.seq += 1
         else:
             self.seq = 0
+
         b.extend(cemi.to_body())
         f.body=b
-        self.data_server.socket.sendto(bytes_to_str(f.to_frame()), (self.remote_ip, self.remote_port))
+        self.data_server.socket.sendto(f.to_frame(), (self.remote_ip, self.remote_port))
         # TODO: wait for ack
         
         
@@ -331,7 +339,7 @@ class KNXIPTunnel():
 class DataRequestHandler(socketserver.BaseRequestHandler):
     
     def handle(self):
-        data = str_to_bytes(self.request[0])
+        data = self.request[0]
         socket = self.request[1]
         
         f = KNXIPFrame.from_frame(data)
@@ -367,10 +375,10 @@ class DataRequestHandler(socketserver.BaseRequestHandler):
                 tunnel.result_queue.put(msg.data)
             
             if send_ack:
-                bodyack = [0x04, req.channel, req.seq, KNXIPFrame.E_NO_ERROR]
+                bodyack = bytearray([0x04, req.channel, req.seq, KNXIPFrame.E_NO_ERROR])
                 ack = KNXIPFrame(KNXIPFrame.TUNNELLING_ACK)
                 ack.body = bodyack
-                socket.sendto(bytes_to_str(ack.to_frame()), self.client_address)
+                socket.sendto(ack.to_frame(), self.client_address)
         
  
 class DataServer(socketserver.ThreadingMixIn, socketserver.UDPServer):
