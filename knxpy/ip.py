@@ -255,7 +255,8 @@ class KNXIPTunnel():
 
             listen = self.loop.create_datagram_endpoint(DataServerProtocol, local_addr=(local_ip, 0))
             transport, protocol = await listen
-            
+            transport.tunnel = self
+
             self.data_server = transport
             # get the data port
             self.data_port = transport.get_extra_info('sockname')[1]
@@ -316,21 +317,21 @@ class KNXIPTunnel():
 
         b.extend(cemi.to_body())
         f.body=b
+
         self.data_server._sock.sendto(f.to_frame(), (self.remote_ip, self.remote_port))
         # TODO: wait for ack
         
 
     async def group_read(self, addr):
-        print('group_read')
         cemi = CEMIMessage()
         cemi.init_group_read(addr)
         self.send_tunnelling_request(cemi)
-
+    
         # Wait for the result
         print('waiting')
         res = await self.result_queue.get()
         print('ok')
-        self.result_queue.task_done()
+        #self.result_queue.task_done()
 
         return res
     
@@ -393,7 +394,8 @@ class DataServerProtocol(object):
 
     def datagram_received(self, data, addr):
         socket = self.transport._sock
-        
+        tunnel = self.transport.tunnel
+
         f = KNXIPFrame.from_frame(data)
 
         if f.service_type_id == KNXIPFrame.TUNNELING_REQUEST:
@@ -417,9 +419,13 @@ class DataServerProtocol(object):
             logging.debug("Received KNX message {}".format(msg))
             
             # Put RESPONSES into the result queue
+            print(msg.cmd)
             if (msg.cmd == CEMIMessage.CMD_GROUP_RESPONSE):
-                tunnel.result_queue.put(msg.data)
-            
+                print('putting {} in the que'.format(msg.data))
+                asyncio.get_event_loop().create_task( tunnel.result_queue.put(msg.data) )
+                
+
+
             if send_ack:
                 bodyack = bytearray([0x04, req.channel, req.seq, KNXIPFrame.E_NO_ERROR])
                 ack = KNXIPFrame(KNXIPFrame.TUNNELLING_ACK)
