@@ -22,3 +22,15 @@ def int_to_array(i, length=2):
         i = i >> 8
     return reversed(res)
 
+
+def encode_ga(str):
+    parts = str.split('/')
+
+    return (int(parts[0]) << 11) + (int(parts[1]) << 8) + int(parts[2]) 
+
+
+def decode_ga(i):
+    parts = [(i >> 11) & 0x1f, (i >> 8) & 0x07, (i) & 0xff]
+
+    return '{}/{}/{}'.format(*parts)
+
