@@ -12,8 +12,7 @@ else:
     import socketserver
     import queue
 
-from knxpy.core import KNXException
-from knxpy.helper import *
+from . import util
 
 
 
@@ -157,7 +156,7 @@ class CEMIMessage():
         
         apdu = cemi[10+offset:]
         if len(apdu) != m.mpdu_len:
-            raise KNXException("APDU LEN should be {} but is {}".format(m.mpdu_len,len(apdu)))
+            raise Exception("APDU LEN should be {} but is {}".format(m.mpdu_len,len(apdu)))
         
         if len(apdu)==1:
             m.data = apci & 0x2f
@@ -214,13 +213,15 @@ class CEMIMessage():
             c = "WR"
         elif self.cmd == self.CMD_GROUP_RESPONSE:
             c = "RS"
-        return "{0:<10}-> {1:<10} {2} {3}".format(decode_ga(self.src_addr), decode_ga(self.dst_addr), c, self.data)
+        return "{0:<10}-> {1:<10} {2} {3}".format(util.decode_ga(self.src_addr), util.decode_ga(self.dst_addr), c, self.data)
     
     
 class KNXIPTunnel():
-    
-    # TODO: implement a control server
-    #    control_server = None
+    """
+    An IP tunnel to the KNX bus to send and recieve data
+
+    """
+
     data_server = None
     control_socket = None
     channel = 0
@@ -233,11 +234,27 @@ class KNXIPTunnel():
         self.remote_port = port
         self.discovery_port = None
         self.data_port = None
+        self.read_queue = []
         self.result_queue = asyncio.Queue()
         self.unack_queue = asyncio.Queue()
         self.loop = loop
 
     async def connect(self):
+        """
+        Connect to the KNX bus
+
+        Examples
+        --------
+        >>> import asyncio
+        >>> import knxpy
+        >>> async def main(loop):
+        ...     tunnel = knxpy.KNXIPTunnel("192.168.1.3",3671,loop)
+        ...     await tunnel.connect()
+        ...
+        >>> loop = asyncio.get_event_loop()
+        >>> loop.run_until_complete(main(loop))
+
+        """
         # Find my own IP
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect((self.remote_ip,self.remote_port))
@@ -246,13 +263,6 @@ class KNXIPTunnel():
         if self.data_server:
             logging.info("Data server already running, not starting again")
         else:
-            #self.data_server = DataServer((local_ip, 0), DataRequestHandler)
-            #self.data_server.tunnel = self 
-            #_ip, self.data_port = self.data_server.server_address
-            #data_server_thread = threading.Thread(target=self.data_server.serve_forever)
-            #data_server_thread.daemon = True
-            #data_server_thread.start()
-
             listen = self.loop.create_datagram_endpoint(DataServerProtocol, local_addr=(local_ip, 0))
             transport, protocol = await listen
             transport.tunnel = self
@@ -262,8 +272,6 @@ class KNXIPTunnel():
             self.data_port = transport.get_extra_info('sockname')[1]
 
 
-
-        print("Control")
         ################################################################################
         # Send a message to the knx ip interface to instruct it to send bus telegrams
         # to the data server
@@ -274,19 +282,19 @@ class KNXIPTunnel():
         # Connect packet
         p=bytearray()
         p.extend([0x06,0x10]) # header size, protocol version
-        p.extend(int_to_array(KNXIPFrame.CONNECT_REQUEST , 2))
+        p.extend(util.int_to_array(KNXIPFrame.CONNECT_REQUEST , 2))
         p.extend([0x00,0x1a]) # total length = 24 octet
 
         # Control endpoint
         p.extend([0x08,0x01]) # length 8 bytes, UPD
         _ip,port=control_socket.getsockname()
-        p.extend(ip_to_array(local_ip))
-        p.extend(int_to_array(port, 2)) 
+        p.extend(util.ip_to_array(local_ip))
+        p.extend(util.int_to_array(port, 2)) 
 
         # Data endpoint
         p.extend([0x08,0x01]) # length 8 bytes, UPD
-        p.extend(ip_to_array(local_ip))
-        p.extend(int_to_array(self.data_port, 2)) 
+        p.extend(util.ip_to_array(local_ip))
+        p.extend(util.int_to_array(self.data_port, 2)) 
 
         # 
         p.extend([0x04,0x04,0x02,0x00])
@@ -296,14 +304,13 @@ class KNXIPTunnel():
         received = control_socket.recv(1024)
         received = bytearray(received)
 
-        print(received)
         r_sid = received[2]*256+received[3]
         if r_sid == KNXIPFrame.CONNECT_RESPONSE:
             self.channel = received[6]
             logging.debug("Connected KNX IP tunnel (Channel: {})".format(self.channel,self.seq))
             # TODO: parse the other parts of the response
         else:
-            raise KNXException("Could not initiate tunnel connection, STI = {}".format(r_sid))
+            raise Exception("Could not initiate tunnel connection, STI = {}".format(r_sid))
         
 
 
@@ -323,38 +330,79 @@ class KNXIPTunnel():
         
 
     async def group_read(self, addr):
+        """
+        reads a value from the KNX bus
+
+        Parameters
+        ----------
+        addr : number
+            the group address to write to as an integer (0-65535)
+
+        Returns
+        -------
+        res : int or bytes
+            the value on the KNX bus
+
+        Raises
+        ------
+        asyncio.TimeoutError
+            when the KNX bus takes too long (0.1s and 0.5s) to answer the read request
+
+
+        Notes
+        -----
+        This is still tricky, not all requests are answered
+
+        """
+
         cemi = CEMIMessage()
         cemi.init_group_read(addr)
+
+        self.read_queue.append(addr)
         self.send_tunnelling_request(cemi)
     
         # Wait for the result
-        print('waiting')
-        res = await self.result_queue.get()
-        print('ok')
-        #self.result_queue.task_done()
+        try:
+            res = await asyncio.wait_for( self.result_queue.get(),0.1 )
+        except:
+            # Try one more time and raise a timeout exception on failure
+            self.send_tunnelling_request(cemi)
+            res = await asyncio.wait_for( self.result_queue.get(),0.5 )
+
+        self.result_queue.task_done()
 
         return res
     
     def group_write(self, addr, data):
+        """
+        Writes a value to the knx bus
+
+        Parameters
+        ----------
+        addr : number
+            the group address to write to as an integer (0-65535)
+
+        data : int or bytes
+            the data to write to the KNX bus as integer or bytes
+
+        Examples
+        --------
+        >>> import asyncio
+        >>> import knxpy
+        >>> async def main(loop):
+        ...     tunnel = knxpy.KNXIPTunnel("192.168.1.3",3671,loop)
+        ...     await tunnel.connect()
+        ...     tunnel.group_write(2375,1)
+        ...
+        >>> loop = asyncio.get_event_loop()
+        >>> loop.run_until_complete(main(loop))
+
+        """
+
         cemi = CEMIMessage()
         cemi.init_group_write(addr, data)
         self.send_tunnelling_request(cemi)
     
-    def group_toggle(self,addr, use_cache=True):
-        d = self.group_read(addr, use_cache)
-        if len(d) != 1:
-            problem="Can't toggle a {}-octet group address {}".format(len(d),addr)
-            logging.error(problem)
-            raise KNXException(problem)
-        
-        if (d[0]==0):
-            self.group_write(addr, [1])
-        elif (d[0]==1):
-            self.group_write(addr, [0])
-        else:
-            problem="Can't toggle group address {} as value is {}".format(addr,d[0])
-            logging.error(problem)
-            raise KNXException(problem)
             
     
 class DataServerProtocol(object):
@@ -403,8 +451,6 @@ class DataServerProtocol(object):
             msg = CEMIMessage.from_body(req.cEmi)
             send_ack = False
             
-            #tunnel = self.server.tunnel
-            
             if msg.code == 0x29:
                 # LData.req
                 send_ack = True
@@ -419,11 +465,10 @@ class DataServerProtocol(object):
             logging.debug("Received KNX message {}".format(msg))
             
             # Put RESPONSES into the result queue
-            print(msg.cmd)
-            if (msg.cmd == CEMIMessage.CMD_GROUP_RESPONSE):
-                print('putting {} in the que'.format(msg.data))
+            if (msg.cmd == CEMIMessage.CMD_GROUP_RESPONSE and msg.dst_addr in tunnel.read_queue):
+                # remove dst_addr from the read queue
+                tunnel.read_queue.remove(msg.dst_addr)
                 asyncio.get_event_loop().create_task( tunnel.result_queue.put(msg.data) )
-                
 
 
             if send_ack:
@@ -431,6 +476,4 @@ class DataServerProtocol(object):
                 ack = KNXIPFrame(KNXIPFrame.TUNNELLING_ACK)
                 ack.body = bodyack
                 socket.sendto(ack.to_frame(), addr)
-
-
 
