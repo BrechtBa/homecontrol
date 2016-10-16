@@ -250,6 +250,7 @@ class KNXIPTunnel():
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect((self.remote_ip,self.remote_port))
         local_ip=s.getsockname()[0]
+        s.close()
 
         if self.data_server:
             logging.info("Data server already running, not starting again")
@@ -303,7 +304,9 @@ class KNXIPTunnel():
         else:
             raise Exception("Could not initiate tunnel connection, STI = {}".format(r_sid))
         
-
+        # close the control socket
+        control_socket.close()
+        
 
     def send_tunnelling_request(self, cemi):
         f = KNXIPFrame(KNXIPFrame.TUNNELING_REQUEST)
@@ -337,12 +340,14 @@ class KNXIPTunnel():
         Raises
         ------
         asyncio.TimeoutError
-            when the KNX bus takes too long (0.1s and 0.5s) to answer the read request
+            when the KNX bus takes too long (0.1s and 0.5s) to answer the read 
+            request
 
 
         Notes
         -----
-        This is still tricky, not all requests are answered
+        This is still tricky, not all requests are answered and fast successive 
+        read calls can lead to wrong answers
 
         """
 

@@ -1,24 +1,43 @@
-from knxpy.ip import KNXIPTunnel
-import time
+import asyncio
 import logging
 
-def main():
-    logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+import knxpy
 
-    tunnel = KNXIPTunnel("192.168.1.128",3671)
-    tunnel.connect()
+
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+
+
+async def main(loop):
+
+    # connect
+    tunnel = knxpy.KNXIPTunnel("192.168.1.3",3671,loop)
+    await tunnel.connect()
+
+    # read
+    print('###   read    ###')
+    v = await tunnel.group_read( knxpy.util.encode_ga('1/1/71') )
+    print('read returned: {}'.format(v))
     
-    while (True):
-        # Toggle the value of group address 0/0/1
-        tunnel.group_toggle(1)
-        
-        # display the values of group addresses 0/0/1 to 0/0/5
-        for i in range(1,6):
-            v=tunnel.group_read(i)
-            print("{} = {}".format(i,v))
+    # write
+    await asyncio.sleep(0.5)
+    print('###   write   ###')
+    tunnel.group_write( knxpy.util.encode_ga('1/1/71'),1)
 
-        # delay
-        time.sleep(12)
-        
-if __name__ == '__main__':
-    main()
+    # read
+    print('###   read    ###')
+    v = await tunnel.group_read( knxpy.util.encode_ga('1/1/71') )
+    print('read returned: {}'.format(v))
+
+    # write
+    await asyncio.sleep(0.5)
+    print('###   write   ###')
+    tunnel.group_write( knxpy.util.encode_ga('1/1/71'),0)
+
+    await asyncio.sleep(1.0)
+
+
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(main(loop))
+
+
