@@ -1,16 +1,7 @@
 import socket
-import threading
 import asyncio
 
-import sys
 import logging
-
-if sys.version[0]=='2':
-    import SocketServer as socketserver
-    import Queue as queue
-else:
-    import socketserver
-    import queue
 
 from . import util
 
