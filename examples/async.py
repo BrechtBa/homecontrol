@@ -10,7 +10,7 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 async def main(loop):
 
     # connect
-    tunnel = knxpy.KNXIPTunnel("192.168.1.3",3671,loop)
+    tunnel = knxpy.asyncip.KNXIPTunnel("192.168.1.3",3671,loop)
     await tunnel.connect()
 
     # read
