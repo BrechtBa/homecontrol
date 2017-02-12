@@ -171,8 +171,7 @@ class DataRequestHandler(socketserver.BaseRequestHandler):
             
             logging.debug("Received KNX message {}".format(msg))
             
-            # Put RESPONSES into the result queue
-            print( '{} vs {}'.format(msg.cmd,CEMIMessage.CMD_GROUP_RESPONSE))
+            # Put RESPONSES into the result dict
             if (msg.cmd == CEMIMessage.CMD_GROUP_RESPONSE):
                 tunnel.result_dict[msg.dst_addr] = msg.data
 
