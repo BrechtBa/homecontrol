@@ -24,6 +24,7 @@ class KNXIPTunnel():
         self.remote_port = port
         self.discovery_port = None
         self.data_port = None
+        self.result_addr_dict = {}
         self.result_dict = {}
         self.unack_queue = queue.Queue()
         self.callback = callback
@@ -107,6 +108,8 @@ class KNXIPTunnel():
         else:
             addr = ga
 
+        self.result_addr_dict[addr] = True
+
         cemi = CEMIMessage()
         cemi.init_group_read(addr)
         self.send_tunnelling_request(cemi)
@@ -119,7 +122,9 @@ class KNXIPTunnel():
             if addr in self.result_dict:
                 res = self.result_dict[addr]
                 del self.result_dict[addr]
-        
+
+
+        del self.result_addr_dict[addr]
 
         if not dpt is None:
             res = util.decode_dpt(res,dpt)
@@ -172,7 +177,7 @@ class DataRequestHandler(socketserver.BaseRequestHandler):
             logging.debug("Received KNX message {}".format(msg))
             
             # Put RESPONSES into the result dict
-            if (msg.cmd == CEMIMessage.CMD_GROUP_RESPONSE):
+            if (msg.cmd == CEMIMessage.CMD_GROUP_RESPONSE) and msg.dst_addr in tunnel.result_addr_dict:
                 tunnel.result_dict[msg.dst_addr] = msg.data
 
             # execute callback
