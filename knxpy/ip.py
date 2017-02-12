@@ -151,7 +151,7 @@ class DataRequestHandler(socketserver.BaseRequestHandler):
         f = KNXIPFrame.from_frame(data)
         
         if f.service_type_id == KNXIPFrame.TUNNELING_REQUEST:
-            req = KNXTunnelingRequest.from_body(f.body)            
+            req = KNXTunnelingRequest.from_body(f.body)
             msg = CEMIMessage.from_body(req.cEmi)
             send_ack = False
             
