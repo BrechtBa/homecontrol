@@ -22,9 +22,9 @@ setup(
     description='A simple connector to a KNX bus',
     long_description=open(os.path.join(os.path.dirname(__file__), 'README.rst')).read(),
     url='http://github.com/BrechtBa/knxpy',
-    author='Daniel Matuschek',
+    author='Daniel Matuschek, Brecht Baeten',
     author_email='',
     packages=find_packages(),
     install_requires=[],
-    classifiers=['Programming Language :: Python :: 2.7'],
+    classifiers=['Programming Language :: Python :: 3.5'],
 )
