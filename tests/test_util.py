@@ -28,6 +28,17 @@ class TestUtil(unittest.TestCase):
     def test_decode_ga(self):
         self.assertEqual( knxpy.util.decode_ga(2375), '1/1/71' )
 
+    def test_encode_dpt_9(self):
+        self.assertEqual( knxpy.util.encode_dpt('22.64','9'), b'\x00\x0cl' )
+
+    def test_decode_dpt_9(self):
+        self.assertEqual( knxpy.util.encode_dpt(b'\x0cl','9'), 22.64 )
+
+    def test_encode_dpt_5(self):
+        self.assertEqual( knxpy.util.encode_dpt('22.64','9'), b'\x00\x0cl' )
+
+    def test_decode_dpt_5(self):
+        self.assertEqual( knxpy.util.encode_dpt(b'\x0cl','9'), 22.64 )
 
 if __name__ == '__main__':
     unittest.main()

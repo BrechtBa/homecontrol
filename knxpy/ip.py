@@ -20,14 +20,14 @@ class KNXIPTunnel():
     data_handler = None
     result_queue = None
     
-    def __init__(self, ip, port):
+    def __init__(self, ip, port, callback=None):
         self.remote_ip = ip
         self.remote_port = port
         self.discovery_port = None
         self.data_port = None
         self.result_queue = queue.Queue()
         self.unack_queue = queue.Queue()
-
+        self.callback = callback
 
     def connect(self):
         # Find my own IP
@@ -150,12 +150,22 @@ class DataRequestHandler(socketserver.BaseRequestHandler):
             if (msg.cmd == CEMIMessage.CMD_GROUP_RESPONSE):
                 tunnel.result_queue.put(msg.data)
             
+            # execute callback
+            if not tunnel.callback is None:
+                try:
+                    tunnel.callback(msg)
+                except exception as e:
+                    logging.error("Error encountered durring callback execution: {}".format(e))
+
+
             if send_ack:
                 bodyack = bytearray([0x04, req.channel, req.seq, KNXIPFrame.E_NO_ERROR])
                 ack = KNXIPFrame(KNXIPFrame.TUNNELLING_ACK)
                 ack.body = bodyack
                 socket.sendto(ack.to_frame(), self.client_address)
-        
+            
+
+
  
 class DataServer(socketserver.ThreadingMixIn, socketserver.UDPServer):
     pass

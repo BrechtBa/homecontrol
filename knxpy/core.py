@@ -168,24 +168,37 @@ class CEMIMessage():
         self.data = 0
 
     def to_body(self):
-        b = [self.code,0x00,self.ctl1,self.ctl2,
-             (self.src_addr >> 8) & 0xff, (self.src_addr >> 0) & 0xff,
-             (self.dst_addr >> 8) & 0xff, (self.dst_addr >> 0) & 0xff,
-             ]
-
+        b = [
+            self.code,
+            0x00,
+            self.ctl1,
+            self.ctl2,
+            (self.src_addr >> 8) & 0xff,
+            (self.src_addr >> 0) & 0xff,
+            (self.dst_addr >> 8) & 0xff,
+            (self.dst_addr >> 0) & 0xff,
+        ]
 
         if type(self.data)==list:
             data = self.data
         else:
             data = [self.data]
 
-        if (len(data)==1) and ((data[0] & 3) == data[0]) :
-            # less than 6 bit of data, pack into APCI byte
-            b.extend([1,(self.tpci_apci >> 8) & 0xff,((self.tpci_apci >> 0) & 0xff) + data[0]])
-        
+
+        if len(data) == 1:
+            if (data[0] & 3) == data[0]:
+                # dpt1 data is added to the acpi byte and not data bytes are added
+                b.extend([1,(self.tpci_apci >> 8) & 0xff,((self.tpci_apci >> 0) & 0xff) + data[0]])
+            else:
+                b.extend([1+len(data),(self.tpci_apci >> 8) & 0xff,(self.tpci_apci >> 0) & 0xff])
+                b.extend(data)
         else:
-            b.extend([1+len(data),(self.tpci_apci >> 8) & 0xff,(self.tpci_apci >> 0) & 0xff])
-            b.extend(data)
+            if (data[0] & 3) == data[0] and data[1] == 0:
+                # dpt1 data is added to the acpi byte and not data bytes are added
+                b.extend([1,(self.tpci_apci >> 8) & 0xff,((self.tpci_apci >> 0) & 0xff) + data[0]])
+            else:
+                b.extend([len(data),(self.tpci_apci >> 8) & 0xff,((self.tpci_apci >> 0) & 0xff) + data[0]])
+                b.extend(data[1:])
 
         return b
         
@@ -193,11 +206,11 @@ class CEMIMessage():
         
         c="??"
         if self.cmd == self.CMD_GROUP_READ:
-            c = "RD"
+            c = "read"
         elif self.cmd == self.CMD_GROUP_WRITE:
-            c = "WR"
+            c = "write"
         elif self.cmd == self.CMD_GROUP_RESPONSE:
-            c = "RS"
+            c = "response"
         return "{0:<10}-> {1:<10} {2} {3}".format(util.decode_ga(self.src_addr), util.decode_ga(self.dst_addr), c, self.data)
     
     
