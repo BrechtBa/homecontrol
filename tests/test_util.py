@@ -28,17 +28,24 @@ class TestUtil(unittest.TestCase):
     def test_decode_ga(self):
         self.assertEqual( knxpy.util.decode_ga(2375), '1/1/71' )
 
-    def test_encode_dpt_9(self):
-        self.assertEqual( knxpy.util.encode_dpt('22.64','9'), b'\x00\x0cl' )
+    def test_encode_dpt_1(self):
+        self.assertEqual( knxpy.util.encode_dpt(0,'1'), [0] )
 
-    def test_decode_dpt_9(self):
-        self.assertEqual( knxpy.util.encode_dpt(b'\x0cl','9'), 22.64 )
+    def test_decode_dpt_1(self):
+        self.assertEqual( knxpy.util.decode_dpt(1,'1'), 1 )
 
     def test_encode_dpt_5(self):
-        self.assertEqual( knxpy.util.encode_dpt('22.64','9'), b'\x00\x0cl' )
+        self.assertEqual( knxpy.util.encode_dpt(140,'5'), [0,140] )
 
     def test_decode_dpt_5(self):
-        self.assertEqual( knxpy.util.encode_dpt(b'\x0cl','9'), 22.64 )
+        self.assertEqual( knxpy.util.decode_dpt(b'\x8c','5'), 140 )
+
+    def test_encode_dpt_9(self):
+        self.assertEqual( knxpy.util.encode_dpt(22.64,'9'), b'\x00\x0cl' )
+
+    def test_decode_dpt_9(self):
+        self.assertEqual( knxpy.util.decode_dpt(b'\x0cl','9'), 22.64 )
+
 
 if __name__ == '__main__':
     unittest.main()

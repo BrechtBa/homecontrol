@@ -4,6 +4,7 @@ import threading
 import logging
 import socketserver
 import queue
+import time
 
 from .core import KNXIPFrame,KNXTunnelingRequest,CEMIMessage
 from . import util
@@ -17,17 +18,16 @@ class KNXIPTunnel():
     control_socket = None
     channel = 0
     seq = 0
-    data_handler = None
-    result_queue = None
     
     def __init__(self, ip, port, callback=None):
         self.remote_ip = ip
         self.remote_port = port
         self.discovery_port = None
         self.data_port = None
-        self.result_queue = queue.Queue()
+        self.result_dict = {}
         self.unack_queue = queue.Queue()
         self.callback = callback
+        self.read_timeout = 0.1
 
     def connect(self):
         # Find my own IP
@@ -100,22 +100,47 @@ class KNXIPTunnel():
         # TODO: wait for ack
         
         
-    def group_read(self, addr):
+    def group_read(self, ga, dpt=None):
         
+        if type(ga) is str:
+            addr = util.encode_ga(ga)
+        else:
+            addr = ga
+
         cemi = CEMIMessage()
         cemi.init_group_read(addr)
         self.send_tunnelling_request(cemi)
+
         # Wait for the result
-        res = self.result_queue.get()
-        self.result_queue.task_done()
+        res = []
+        starttime = time.time()
+        runtime = 0
+        while res == [] and runtime < self.read_timeout:
+            if addr in self.result_dict:
+                res = self.result_dict[addr]
+                del self.result_dict[addr]
+        
+
+        if not dpt is None:
+            res = util.decode_dpt(res,dpt)
+
         return res
     
-    def group_write(self, addr, data):
+    def group_write(self, ga, data, dpt=None):
+
+        if type(ga) is str:
+            addr = util.encode_ga(ga)
+        else:
+            addr = ga
+
+        if not dpt is None:
+            util.encode_dpt(data,dpt)
+
         cemi = CEMIMessage()
         cemi.init_group_write(addr, data)
         self.send_tunnelling_request(cemi)
     
-            
+    
     
 class DataRequestHandler(socketserver.BaseRequestHandler):
     
@@ -147,9 +172,10 @@ class DataRequestHandler(socketserver.BaseRequestHandler):
             logging.debug("Received KNX message {}".format(msg))
             
             # Put RESPONSES into the result queue
+            print( '{} vs {}'.format(msg.cmd,CEMIMessage.CMD_GROUP_RESPONSE))
             if (msg.cmd == CEMIMessage.CMD_GROUP_RESPONSE):
-                tunnel.result_queue.put(msg.data)
-            
+                tunnel.result_dict[msg.dst_addr] = msg.data
+
             # execute callback
             if not tunnel.callback is None:
                 try:

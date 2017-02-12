@@ -106,7 +106,7 @@ class CEMIMessage():
     data = [0]
     
     def __init__(self):
-        pass    
+        pass
     
     @classmethod
     def from_body(cls, cemi):

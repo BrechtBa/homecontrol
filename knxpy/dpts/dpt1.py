@@ -10,7 +10,5 @@ def encode(value):
 
 
 def decode(data):
-    if len(data) != 1:
-        return None
-    return bool(data[0] & 0x01)
+    return (data & 0x01)
 
