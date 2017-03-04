@@ -184,7 +184,7 @@ class DataRequestHandler(socketserver.BaseRequestHandler):
             if not tunnel.callback is None:
                 try:
                     tunnel.callback(msg)
-                except exception as e:
+                except Exception as e:
                     logging.error("Error encountered durring callback execution: {}".format(e))
 
 
