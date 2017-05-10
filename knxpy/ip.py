@@ -192,20 +192,24 @@ class KNXIPTunnel(object):
         # 
         p.extend([0x04,0x04,0x02,0x00])
 
+        
         self.control_socket.sendto(p, (self.remote_ip, self.remote_port))
+        
 
-        #TODO: non-blocking receive
-        received = self.control_socket.recv(1024)
-        received = bytearray(received)
-
-        # Check if the response is an TUNNELING ACK
-        r_sid = received[2]*256+received[3]
-        if r_sid == KNXIPFrame.CONNECT_RESPONSE:
-            self.channel = received[6]
-            logging.debug("Connected KNX IP tunnel (Channel: {})".format(self.channel,self.seq))
-            # TODO: parse the other parts of the response
+        try:
+            self.control_socket.settimeout(1)
+            received = bytearray(self.control_socket.recv(1024))
+        except:
+            raise Exception('Could not connect to knx gateway {}:{}'.format(self.remote_ip, self.remote_port))
         else:
-            raise Exception("Could not initiate tunnel connection, STI = {}".format(r_sid))
+            # Check if the response is an TUNNELING ACK
+            r_sid = received[2]*256+received[3]
+            if r_sid == KNXIPFrame.CONNECT_RESPONSE:
+                self.channel = received[6]
+                logging.debug("Connected KNX IP tunnel (Channel: {})".format(self.channel,self.seq))
+                # TODO: parse the other parts of the response
+            else:
+                raise Exception("Could not initiate tunnel connection, STI = {}".format(r_sid))
 
 
     

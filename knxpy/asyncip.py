@@ -3,10 +3,12 @@ import time
 import logging
 import asyncio
 
+
 from .core import KNXIPFrame,KNXTunnelingRequest,CEMIMessage
 from . import util
 
 from . import ip
+
 
 
 class KNXIPTunnel(ip.KNXIPTunnel):
@@ -14,6 +16,7 @@ class KNXIPTunnel(ip.KNXIPTunnel):
         super().__init__(ip,port,callback=callback)
 
         self.loop = loop
+
 
     async def connect(self):
         """
@@ -34,7 +37,6 @@ class KNXIPTunnel(ip.KNXIPTunnel):
 
         # initiate tunneling
         self._initiate_tunneling()
-    
 
 
     async def group_read(self, ga, dpt=None):
