@@ -2,4 +2,4 @@
 *.sqlite
 *.egg-info
 dist
-
+env

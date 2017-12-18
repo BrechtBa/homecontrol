@@ -1,5 +1,5 @@
 from . import dpts
-'3'
+
 def tohex(ba):
     return "".join("%02x " % b for b in ba)
 

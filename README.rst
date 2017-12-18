@@ -1,6 +1,5 @@
 knxpy
-------------
-A simple connector to the KNX
+-----
 
 Installation
 ============
@@ -8,8 +7,8 @@ Installation
 Prequisites
 ^^^^^^^^^^^
 For the asyncio ip tunnel at least python 3.5 is required.
-The thread ip tunnel should work with earlier python versions
-
+The thread ip tunnel should work with earlier python versions.
+A simple python connector to knxd is also available.
 
 Setup
 ^^^^^
@@ -20,7 +19,6 @@ or
 * download the latest `release <http://github.com/BrechtBa/knxpy/releases>`_
 * unzip and cd to the folder
 * run ``python3 setup.py install``
-
 
 Examples
 ========
