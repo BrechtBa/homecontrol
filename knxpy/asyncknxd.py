@@ -51,7 +51,7 @@ class KNXD(object):
                 data = await reader.read(100)
                 self.callback(data)
         
-        await listen(reader)
+        self.loop.create_task(listen(reader))
         
         #writer.close()
 
@@ -143,4 +143,4 @@ def default_callback(data):
             return msg
     except:
         logger.exception('could not decode message {}'.format(data))
-            
+
