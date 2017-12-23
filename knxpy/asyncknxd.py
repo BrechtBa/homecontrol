@@ -72,7 +72,7 @@ class KNXD(object):
             addr = ga
         self.socket.send(encode_data('HHBB', [EIB_GROUP_PACKET, addr, 0, KNXREAD]))
         
-    async def group_write(self, ga, data, dpt=None):
+    def group_write(self, ga, data, dpt=None):
         """
         Writes a value to the KNX bus
 
@@ -90,7 +90,7 @@ class KNXD(object):
             addr = util.encode_ga(ga)
         else:
             addr = ga
-        if not dpt is None:
+        if dpt is not None:
             util.encode_dpt(data,dpt)
         self.socket.send(encode_data('HHBB', [EIB_GROUP_PACKET, addr, 0, KNXWRITE | data]))
 

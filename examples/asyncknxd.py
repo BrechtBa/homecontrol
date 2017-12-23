@@ -13,6 +13,9 @@ connection = knxpy.asyncknxd.KNXD(ip='localhost', port=6720, callback=callback)
 async def main():
     await connection.connect()
     print('connected')
+        
+    connection.group_write('1/1/61', 0)
+    connection.group_write('1/1/61', 1)
 
     
 loop = asyncio.get_event_loop()
