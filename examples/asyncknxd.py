@@ -1,14 +1,15 @@
 import knxpy
 import asyncio
 
+import knxpy.util
 
 
 def callback(data):
-    message = knxpy.asyncknxd.default_callback(data)
+    message = knxpy.util.default_callback(data)
     print(message)
 
 
-connection = knxpy.asyncknxd.KNXD(ip='localhost', port=6720, callback=callback)
+connection = knxpy.knxd_async.KNXD(ip='localhost', port=6720, callback=callback)
 
 async def main():
     await connection.connect()

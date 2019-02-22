@@ -4,11 +4,9 @@ import logging
 import asyncio
 
 
-from .core import KNXIPFrame,KNXTunnelingRequest,CEMIMessage
-from . import util
-
-from . import ip
-
+from knxpy.core import KNXIPFrame, KNXTunnelingRequest, CEMIMessage
+from knxpy import util
+from knxpy import ip
 
 
 class KNXIPTunnel(ip.KNXIPTunnel):
@@ -16,7 +14,6 @@ class KNXIPTunnel(ip.KNXIPTunnel):
         super().__init__(ip,port,callback=callback)
 
         self.loop = loop
-
 
     async def connect(self):
         """
@@ -37,7 +34,6 @@ class KNXIPTunnel(ip.KNXIPTunnel):
 
         # initiate tunneling
         self._initiate_tunneling()
-
 
     async def group_read(self, ga, dpt=None):
         """
@@ -93,7 +89,7 @@ class KNXIPTunnel(ip.KNXIPTunnel):
 
         return res
 
-    
+
 class DataServerProtocol(object):
     """
     An UDP server protocol for recieving messages from the KNX ip gateway

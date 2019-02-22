@@ -192,7 +192,7 @@ class KNXIPTunnel(object):
         # 
         p.extend([0x04,0x04,0x02,0x00])
 
-        
+
         self.control_socket.sendto(p, (self.remote_ip, self.remote_port))
         
 
@@ -210,7 +210,6 @@ class KNXIPTunnel(object):
                 # TODO: parse the other parts of the response
             else:
                 raise Exception("Could not initiate tunnel connection, STI = {}".format(r_sid))
-
 
     
 class DataRequestHandler(socketserver.BaseRequestHandler):
