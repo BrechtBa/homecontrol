@@ -147,13 +147,17 @@ def decode_dpt(data, dpt):
 class message():
     def __init__(self, src, dst, flg, val):
         self.src = src
-        self.dst = dst
+        self._dst = dst
         self.flg = flg
         self.val = val
 
+    @property
+    def dst(self):
+        return decode_ga(self._dst)
+
     def __repr__(self):
-        return 'src: {src}, dst: {dst}, flg: {flg}, val: {val}'.format(
-            src=self.src, dst=decode_ga(self.dst), flg=self.flg, val=self.val)
+        return '<message src: {src}, dst: {dst}, flg: {flg}, val: {val}>'.format(
+            src=self.src, dst=self.dst, flg=self.flg, val=self.val)
 
 
 def encode_data(fmt, data):
