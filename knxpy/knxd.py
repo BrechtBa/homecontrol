@@ -19,14 +19,9 @@ class KNXD(object):
     EIB_GROUP_PACKET = 0x27
     EIB_OPEN_GROUPCON = 0x26
 
-    def __init__(self, ip='localhost', port=6720, callback=None, read_timeout=0.5):
+    def __init__(self, ip='localhost', port=6720, read_timeout=0.5):
         self.ip = ip
         self.port = port
-        
-        if callback is None:
-            def callback(data):
-                print(default_callback(data))
-        self.callback = callback
 
         self.read_timeout = read_timeout
         self.socket = None
@@ -43,10 +38,14 @@ class KNXD(object):
         self.socket.send(encode_data('HHB', [self.EIB_OPEN_GROUPCON, 0, 0]))
         self.connected = True
 
-    def listen(self):
+    def listen(self, callback=None):
         """
         Listen for messages on a knx server.
         """
+        if callback is None:
+            def callback(data):
+                print(default_callback(data))
+
         def listen():
             self.listening = True
             while self.listening:
@@ -58,7 +57,7 @@ class KNXD(object):
                 while self.listening:
                     try:
                         data = recv_socket.recv(1024)
-                        self.callback(data)
+                        callback(data)
                     except:
                         logger.exception('exception while listening')
                         break
