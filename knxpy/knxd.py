@@ -7,7 +7,7 @@ from threading import Thread
 from knxpy.util import encode_ga, encode_dpt, encode_data, default_callback
 
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
