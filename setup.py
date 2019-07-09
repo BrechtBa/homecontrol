@@ -4,7 +4,7 @@ import os
 
 # retrieve the version
 try:
-    versionfile = os.path.join('knxpy','__version__.py')
+    versionfile = os.path.join('knxpy', '__version__.py')
     f = open( versionfile, 'r')
     content = f.readline()
     splitcontent = content.split('\'')
