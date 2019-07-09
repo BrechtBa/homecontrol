@@ -7,6 +7,7 @@
 
 import struct
 
+
 def encode(value):
     s = 0
     e = 0

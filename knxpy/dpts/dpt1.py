@@ -5,6 +5,7 @@ Boolean data
 0,1
 """
 
+
 def encode(value):
     return [int(value) & 0x01]
 

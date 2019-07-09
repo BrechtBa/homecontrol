@@ -1,10 +1,18 @@
 import struct
 import logging
 
+from enum import Enum
+
 from knxpy import dpts
 
 logger = logging.getLogger(__file__)
 logger.setLevel(logging.DEBUG)
+
+
+class MESSAGETYPE(Enum):
+    KNXREAD = 0x00
+    KNXWRITE = 0x80
+    KNXRESPONSE = 0x40
 
 
 def to_hex(ba):
@@ -42,8 +50,7 @@ def encode_ga(str):
 
 
 def decode_ga(i):
-    parts = [(i >> 11) & 0x1f, (i >> 8) & 0x07, (i) & 0xff]
-
+    parts = [(i >> 11) & 0x1f, (i >> 8) & 0x07, i & 0xff]
     return '{}/{}/{}'.format(*parts)
 
 
@@ -176,19 +183,25 @@ def encode_data(fmt, data):
     return struct.pack('>H', len(ret)) + ret
 
 
-def default_callback(data):
+def decode_telegram(data):
     try:
-        if len(data) > 5:
-            typ = struct.unpack(">H", data[0:2])[0]
-            src = (data[4] << 8) | (data[5])
-            dst = ((data[6]) << 8) | (data[7])
-            flg = data[8] & 0xC0
-            if len(data) == 10:
-                val = data[9] & 0x3f
-            else:
-                val = data[10:]
+        logger.debug('retrieved message {}'.format(' '.join(['{:02x}'.format(d) for d in data])))
 
-            msg = message(src, dst, flg, val)
-            return msg
+        typ = struct.unpack(">H", data[0:2])[0]
+
+        src = (data[4] << 8) | (data[5])
+        dst = ((data[6]) << 8) | (data[7])
+        flg = data[8] & 0xC0
+        if len(data) == 10:
+            val = data[9] & 0x3f
+        else:
+            val = data[10:]
+
+        msg = message(src, dst, flg, val)
+        return msg
     except:
         logger.exception('could not decode message {}'.format(data))
+
+
+def default_callback(message):
+    print(message)

@@ -10,6 +10,9 @@ from .core import KNXIPFrame,KNXTunnelingRequest,CEMIMessage
 from . import util
 
 
+logger = logging.getLogger(__name__)
+
+
 class KNXIPTunnel(object):
     
     # TODO: implement a control server
@@ -44,7 +47,7 @@ class KNXIPTunnel(object):
 
         # create the data server
         if self.data_server:
-            logging.info("Data server already running, not starting again")
+            logger.info("Data server already running, not starting again")
         else:
             self.data_server = DataServer((self.local_ip, 0), DataRequestHandler)
             self.data_server.tunnel = self 
@@ -206,7 +209,7 @@ class KNXIPTunnel(object):
             r_sid = received[2]*256+received[3]
             if r_sid == KNXIPFrame.CONNECT_RESPONSE:
                 self.channel = received[6]
-                logging.debug("Connected KNX IP tunnel (Channel: {})".format(self.channel,self.seq))
+                logger.debug("Connected KNX IP tunnel (Channel: {})".format(self.channel,self.seq))
                 # TODO: parse the other parts of the response
             else:
                 raise Exception("Could not initiate tunnel connection, STI = {}".format(r_sid))
@@ -240,10 +243,10 @@ class DataRequestHandler(socketserver.BaseRequestHandler):
                 send_ack = True
             else: 
                 problem="Unimplemented cEMI message code {}".format(msg.code)
-                logging.error(problem)
+                logger.error(problem)
                 raise Exception(problem)
             
-            logging.debug("Received KNX message {}".format(msg))
+            logger.debug("Received KNX message {}".format(msg))
             
             # Put RESPONSES into the result dict
             if (msg.cmd == CEMIMessage.CMD_GROUP_RESPONSE) and msg.dst_addr in tunnel.result_addr_dict:
@@ -254,7 +257,7 @@ class DataRequestHandler(socketserver.BaseRequestHandler):
                 try:
                     tunnel.callback(msg)
                 except Exception as e:
-                    logging.error("Error encountered durring callback execution: {}".format(e))
+                    logger.error("Error encountered durring callback execution: {}".format(e))
 
 
             if send_ack:

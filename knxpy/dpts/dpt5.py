@@ -7,6 +7,7 @@
 
 import struct
 
+
 def encode(value):
     if value < 0:
         value = 0
