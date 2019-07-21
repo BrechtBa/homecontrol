@@ -5,7 +5,7 @@ from enum import Enum
 
 from knxpy import dpts
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
