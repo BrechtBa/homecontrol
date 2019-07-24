@@ -45,7 +45,7 @@ class KNXD(object):
         """
         if callback is None:
             def callback(data):
-                print(default_callback(data))
+                default_callback(data)
 
         def listen():
             self.listening = True
@@ -66,6 +66,9 @@ class KNXD(object):
                 while self.listening:
                     try:
                         data = recv_socket.recv(100)
+                        if not data:
+                            break
+
                         num_read += len(data)
                         buf.extend(data)
                         if num_read < telegram_length:
@@ -148,7 +151,11 @@ class KNXD(object):
         # prepend data length
         full_msg = bytearray(len(msg).to_bytes(2, byteorder='big'))
         full_msg.extend(msg)
-        self.socket.send(full_msg)
+        try:
+            self.socket.send(full_msg)
+        except BrokenPipeError:
+            self.connect()
+            self.socket.send(full_msg)
 
     def close(self):
         self.connected = False
