@@ -382,9 +382,13 @@ class KNXD(Client):
         pkt[5] = flag | pkt[5]
         self._send(pkt)
 
-    def groupread(self, ga):
+    def group_read(self, ga):
+        if type(ga) is str:
+            addr = encode_ga(ga)
+        else:
+            addr = ga
         pkt = bytearray([0, 39])
-        pkt.extend(encode_ga(ga))
+        pkt.extend(addr.to_bytes(2, byteorder='big'))
         pkt.extend([0, KNXREAD])
         self._send(pkt)
 
