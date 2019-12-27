@@ -108,7 +108,7 @@ class Connections(Base):
                         con = self._connections[fileno]
                         con._in(callback=callback)
                     except Exception as e:  # noqa
-                        # logger.exception("{}: {}".format(self._name, e))
+                        logger.exception(e)
                         con.close()
                         continue
                 if event & select.EPOLLOUT:
@@ -116,7 +116,7 @@ class Connections(Base):
                         con = self._connections[fileno]
                         con._out()
                     except Exception as e:  # noqa
-                        # logger.exception("{}: {}".format(self._name, e))
+                        logger.exception(e)
                         con.close()
                         continue
                 if event & (select.EPOLLHUP | select.EPOLLERR):
@@ -163,6 +163,7 @@ class Stream(Base):
         try:
             data = self.socket.recv(max_size)
         except Exception as e:  # noqa
+            logger.exception(e)
             self.close()
             return
         if data == b'':
@@ -422,11 +423,10 @@ class KNXD(Client):
             # logger.debug("Ignore telegram.")
             return
         if data[6] & 0x03 or (data[7] & 0xC0) == 0xC0:
-            logger.debug("KNX: Unknown APDU")
+            logger.debug("Unknown APDU")
             return
-        # src = self.decode(data[2:4], 'pa')
+
         src = decode_pa(data[2:4])
-        # dst = self.decode(data[4:6], 'ga')
         dst = struct.unpack(">H", data[4:6])[0]
 
         flg = data[7] & 0xC0
@@ -437,50 +437,24 @@ class KNXD(Client):
         elif flg == KNXRESP:
             flg = 'response'
         else:
-            logger.warning("KNX: Unknown flag: {0:02x} src: {1} dest: {2}".format(flg, src, dst))
+            logger.warning("Unknown flag: {0:02x} src: {1} dest: {2}".format(flg, src, dst))
             return
         if len(data) == 8:
-            payload = bytearray([data[7] & 0x3f])
+            val = data[7] & 0x3f
         else:
-            payload = data[8:]
+            val = data[8:]
         if flg == 'write' or flg == 'response':
-            # FIXME callback here
-            val = binascii.hexlify(payload).decode()
             msg = Message(src, dst, flg, val)
             callback(msg)
 
-            # if dst not in self.gal:  # update item/logic
-            #     self._busmonitor("knx: {0} set {1} to {2}".format(src, dst, binascii.hexlify(payload).decode()))
-            #     return
-            # dpt = self.gal[dst]['dpt']
-            # try:
-            #     val = self.decode(payload, dpt)
-            # except Exception as e:
-            #     logger.exception("KNX: Problem decoding frame from {0} to {1} with '{2}' and DPT {3}. "
-            #                      "Exception: {4}".format(src, dst, binascii.hexlify(payload).decode(), dpt, e))
-            #     return
-            # if val is not None:
-            #     self._busmonitor("knx: {0} set {1} to {2}".format(src, dst, val))
-            #     #print "in:  {0}".format(self.decode(payload, 'hex'))
-            #     #out = ''
-            #     #for i in self.encode(val, dpt):
-            #     #    out += " {0:x}".format(i)
-            #     #print "out:{0}".format(out)
-            #     for item in self.gal[dst]['items']:
-            #         item(val, 'KNX', src, dst)
-            #     for logic in self.gal[dst]['logics']:
-            #         logic.trigger('KNX', src, val, dst)
-            # else:
-            #     logger.warning("KNX: Wrong payload '{2}' for ga '{1}' with dpt '{0}'.".format(
-            #         dpt, dst, binascii.hexlify(payload).decode()))
-        elif flg == 'read':
-            logger.debug("KNX: {0} read {1}".format(src, dst))
-            if dst in self.gar:  # read item
-                if self.gar[dst]['item'] is not None:
-                    item = self.gar[dst]['item']
-                    self.groupwrite(dst, item(), item.conf['knx_dpt'], 'response')
-                if self.gar[dst]['logic'] is not None:
-                    self.gar[dst]['logic'].trigger('KNX', src, 'read', dst)
+        # elif flg == 'read':
+        #     logger.debug("KNX: {0} read {1}".format(src, dst))
+        #     if dst in self.gar:  # read item
+        #         if self.gar[dst]['item'] is not None:
+        #             item = self.gar[dst]['item']
+        #             self.group_write(dst, item(), item.conf['knx_dpt'], 'response')
+        #         if self.gar[dst]['logic'] is not None:
+        #             self.gar[dst]['logic'].trigger('KNX', src, 'read', dst)
 
     def run(self):
         self.alive = True
