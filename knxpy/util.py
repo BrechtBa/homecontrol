@@ -151,7 +151,7 @@ def decode_dpt(data, dpt):
         return dpts.dpt232.decode(data)
 
 
-class message():
+class Message():
     def __init__(self, src, dst, flg, val):
         self.src = src
         self._dst = dst
@@ -197,7 +197,7 @@ def decode_telegram(data):
         else:
             val = data[10:]
 
-        msg = message(src, dst, flg, val)
+        msg = Message(src, dst, flg, val)
         return msg
     except:
         logger.exception('could not decode message {}'.format(data))
